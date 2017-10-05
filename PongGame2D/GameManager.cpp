@@ -33,7 +33,7 @@ void GameManager::scoreUp(Paddle *p)
 
 void GameManager::logic()
 {
-	//
+	//TODO: game logic
 }
 
 void GameManager::draw()

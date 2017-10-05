@@ -39,4 +39,36 @@
       <Filter>Arquivos de Origem</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="img\eight.png">
+      <Filter>Arquivos de Recurso</Filter>
+    </Image>
+    <Image Include="img\five.png">
+      <Filter>Arquivos de Recurso</Filter>
+    </Image>
+    <Image Include="img\four.png">
+      <Filter>Arquivos de Recurso</Filter>
+    </Image>
+    <Image Include="img\nine.png">
+      <Filter>Arquivos de Recurso</Filter>
+    </Image>
+    <Image Include="img\one.png">
+      <Filter>Arquivos de Recurso</Filter>
+    </Image>
+    <Image Include="img\seven.png">
+      <Filter>Arquivos de Recurso</Filter>
+    </Image>
+    <Image Include="img\six.png">
+      <Filter>Arquivos de Recurso</Filter>
+    </Image>
+    <Image Include="img\three.png">
+      <Filter>Arquivos de Recurso</Filter>
+    </Image>
+    <Image Include="img\two.png">
+      <Filter>Arquivos de Recurso</Filter>
+    </Image>
+    <Image Include="img\zero.png">
+      <Filter>Arquivos de Recurso</Filter>
+    </Image>
+  </ItemGroup>
 </Project>
