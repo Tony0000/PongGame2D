@@ -1,7 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string>
+#include <iostream>
+#include <vector>
 
 #include <SDL.h>
 #include <SDL_image.h>
@@ -10,13 +8,25 @@
 #endif
 using namespace std;
 
-SDL_Texture *initialize_texture_from_file(const char* file_name, SDL_Renderer *renderer);
-
-static const int screenWidth = 800;
-static const int screenHeight = 600;
-static const int scoreWidth = 100;
-static const int scoreHeight = 167;
+static const int SCREEN_WIDTH = 800;
+static const int SCREEN_HEIGHT = 600;
+static const int SCORE_WIDTH = 70;
+static const int SCORE_HEIGHT = 130;
+static const int PADDLE_WIDTH = 20;
+static const int PADDLE_HEIGHT = 100;
 static const int offset = 100;
+static int p1, p2;
+static bool running = true;
+static int image_width, image_height;
+static bool keyPressed[4]{false, false, false, false};
+
+SDL_Rect paddlePlayer1;
+SDL_Rect paddlePlayer2;
+SDL_Rect ball;
+SDL_Renderer *renderer;
+SDL_Texture * imgScoreP1, *imgScoreP2;
+std::vector<SDL_Event> frameEvents;
+
 static const char scoreImg[10][100]{
 	"img/zero.png",
 	"img/one.png",
@@ -30,89 +40,72 @@ static const char scoreImg[10][100]{
 	"img/nine.png",
 };
 
+SDL_Texture *initialize_texture_from_file(const char* file_name, SDL_Renderer *renderer);
+void resetGame();
+void resetPositions();
+void keyboardInput();
+void processEvents(SDL_Event event);
+
+void playerMoveUp(SDL_Rect *paddle) {
+	paddle->y -= 10;
+}
+
+void playerMoveDown(SDL_Rect *paddle) {
+	paddle->y += 10;
+}
+
 int main(int argc, char **argv)
 {
-	int p1, p2;
-	p1 = p2 = 0;
-
 	// Initialize SDL
 	SDL_Init(SDL_INIT_VIDEO);
 
 	// Create a SDL window
-	SDL_Window *window = SDL_CreateWindow("Hello, SDL2", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screenWidth, screenHeight, SDL_WINDOW_OPENGL);
+	SDL_Window *window = SDL_CreateWindow("Pong 2D", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL);
 
 	// Create a renderer (accelerated and in sync with the display refresh rate)
-	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
 	// Initialize support for loading PNG and JPEG images
 	IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
 
-	SDL_Texture * imgScoreP1 = initialize_texture_from_file(scoreImg[p1], renderer);
-	SDL_Texture * imgScoreP2 = initialize_texture_from_file(scoreImg[p2], renderer);
-
-	int image_width, image_height;
-
-	// Define where on the "screen" we want to draw the texture
+	// Define where on the "screen" to draw the score images
 	SDL_Rect scoreP1;
 	SDL_Rect scoreP2;
 
-	scoreP1.x = screenWidth / 2 - offset - scoreWidth;
+	scoreP1.x = SCREEN_WIDTH / 2 - offset - SCORE_WIDTH;
 	scoreP1.y = 10;
-	scoreP1.w = scoreWidth;
-	scoreP1.h = scoreHeight;
+	scoreP1.w = SCORE_WIDTH;
+	scoreP1.h = SCORE_HEIGHT;
 
-	SDL_Rect texture_destination;
-
-	scoreP2.x = screenWidth / 2 + offset;
+	scoreP2.x = SCREEN_WIDTH / 2 + offset;
 	scoreP2.y = 10;
-	scoreP2.w = scoreWidth;
-	scoreP2.h = scoreHeight;
+	scoreP2.w = SCORE_WIDTH;
+	scoreP2.h = SCORE_HEIGHT;
 
-	//Players paddle
-	SDL_Rect r1;
-	r1.x = 0;
-	r1.y = screenHeight / 2;
-	r1.w = 20;
-	r1.h = 60;
+	resetGame();
 
-	SDL_Rect r2;
-	r2.x = screenWidth - 20;
-	r2.y = screenHeight / 2;
-	r2.w = 20;
-	r2.h = 60;
-
-	bool running = true;
-	SDL_Event event;
 	while (running)
 	{
-		// Process events
-		while (SDL_PollEvent(&event))
+		SDL_Event event;
+		while (SDL_PollEvent(&event) != 0)
 		{
-			if (event.type == SDL_QUIT)
-			{
-				running = false;
-			}
-			else if (event.type == SDL_KEYDOWN)
-			{
-				switch (event.key.keysym.sym)
-				{
-					case 'x':
-					case 'X':
-						imgScoreP1 = initialize_texture_from_file(scoreImg[++p1], renderer);
-						break;
-					case 'm':
-					case 'M':
-						imgScoreP2 = initialize_texture_from_file(scoreImg[++p2], renderer);
-						break;
-				}
-			}
+			frameEvents.push_back(event);
 		}
+		processEvents(event);
+		keyboardInput();
 
 		// Clear screen
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
 
-		// Draw
+		//Render red filled quad
+		SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+		SDL_RenderFillRect(renderer, &ball);
+		SDL_RenderFillRect(renderer, &paddlePlayer1);
+		SDL_RenderFillRect(renderer, &paddlePlayer2);
+
+		// Draw image
 		SDL_RenderCopy(renderer, imgScoreP1, NULL, &scoreP1);
 		SDL_RenderCopy(renderer, imgScoreP2, NULL, &scoreP2);
 
@@ -136,4 +129,111 @@ SDL_Texture *initialize_texture_from_file(const char* file_name, SDL_Renderer *r
 	SDL_Texture * image_texture = SDL_CreateTextureFromSurface(renderer, image);
 	SDL_FreeSurface(image);
 	return image_texture;
+}
+
+void processEvents(SDL_Event event) {
+
+	while (!frameEvents.empty())
+	{
+		event = frameEvents.back();
+		frameEvents.pop_back();
+
+		if (event.type == SDL_QUIT)
+		{
+			running = false;
+		}
+		else if (event.type == SDL_KEYDOWN)
+		{
+			switch (event.key.keysym.sym)
+			{
+			case 'x':
+			case 'X':
+				imgScoreP1 = initialize_texture_from_file(scoreImg[++p1], renderer);
+				break;
+			case 'm':
+			case 'M':
+				imgScoreP2 = initialize_texture_from_file(scoreImg[++p2], renderer);
+				break;
+			case 'a':
+			case 'A':
+				keyPressed[0] = true;
+				break;
+			case 'z':
+			case 'Z':
+				keyPressed[1] = true;
+				break;
+			case '[':
+				keyPressed[2] = true;
+				break;
+			case ']':
+				keyPressed[3] = true;
+				break;
+			}
+		}
+		else if (event.type == SDL_KEYUP) {
+			switch (event.key.keysym.sym)
+			{
+			case 'a':
+			case 'A':
+				keyPressed[0] = false;
+				break;
+			case 'z':
+			case 'Z':
+				keyPressed[1] = false;
+				break;
+			case '[':
+				keyPressed[2] = false;
+				break;
+			case ']':
+				keyPressed[3] = false;
+				break;
+			}
+		}
+	}
+}
+
+void keyboardInput()
+{
+
+	if (keyPressed[0] == true) {
+		if(paddlePlayer1.y > 0)
+			playerMoveUp(&paddlePlayer1);
+	}else if (keyPressed[1] == true) {
+		if(paddlePlayer1.y < SCREEN_HEIGHT - PADDLE_HEIGHT)
+			playerMoveDown(&paddlePlayer1);
+	}
+
+	if (keyPressed[2] == true) {
+		if (paddlePlayer2.y > 0)
+			playerMoveUp(&paddlePlayer2);
+	}else if (keyPressed[3] == true) {
+		if (paddlePlayer2.y < SCREEN_HEIGHT - PADDLE_HEIGHT)
+			playerMoveDown(&paddlePlayer2);
+	}
+
+}
+
+void resetPositions()
+{
+	//Ball 
+	
+
+	//Players paddle
+	paddlePlayer1.x = 0;
+	paddlePlayer1.y = SCREEN_HEIGHT / 2;
+	paddlePlayer1.w = PADDLE_WIDTH;
+	paddlePlayer1.h = PADDLE_HEIGHT;
+
+	paddlePlayer2.x = SCREEN_WIDTH - PADDLE_WIDTH;
+	paddlePlayer2.y = SCREEN_HEIGHT / 2;
+	paddlePlayer2.w = PADDLE_WIDTH;
+	paddlePlayer2.h = PADDLE_HEIGHT;
+}
+
+void resetGame() 
+{
+	p1 = p2 = 0;
+	imgScoreP1 = initialize_texture_from_file(scoreImg[p1], renderer);
+	imgScoreP2 = initialize_texture_from_file(scoreImg[p2], renderer);
+	resetPositions();
 }
