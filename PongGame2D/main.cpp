@@ -205,9 +205,7 @@ SDL_Texture * resetScores(int *points) {
 		p1 = p2 = 0;
 		imgScoreP1 = initialize_texture_from_file(scoreImg[p1], renderer);
 		imgScoreP2 = initialize_texture_from_file(scoreImg[p2], renderer);
-		cout << "Game rebooted! " << endl;
 
-		cout << "player 1: " << p1 << " | player 2: " << p2 << endl;
 		resetPositions();
 
 		return initialize_texture_from_file(scoreImg[0], renderer);
@@ -215,7 +213,7 @@ SDL_Texture * resetScores(int *points) {
 	else {
 		SDL_Texture * score;
 		score = initialize_texture_from_file(scoreImg[++(*points)], renderer);
-		cout << "player 1: " << p1 << " | player 2: " << p2 << endl;
+
 		resetPositions();
 
 		return score;
